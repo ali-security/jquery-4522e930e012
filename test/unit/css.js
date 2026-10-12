@@ -784,6 +784,14 @@ test("can't get css for disconnected in IE<9, see #10254 and #8388", function() 
 	equal( div.css( "top" ), "10px", "can't get top in IE<9, see #8388" );
 });
 
+test("css() works on elements created by jQuery.parseHTML", function() {
+	expect( 1 );
+
+	var div = jQuery( jQuery.parseHTML( "<div style='display: none'></div>" ) );
+
+	equal( div.css( "display" ), "none", "can get css of an element whose document has no defaultView" );
+});
+
 test("can't get background-position in IE<9, see #10796", function() {
 	var div = jQuery( "<div/>" ).appendTo( "#qunit-fixture" ),
 		units = [

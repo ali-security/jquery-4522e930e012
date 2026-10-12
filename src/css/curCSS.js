@@ -11,7 +11,15 @@ var getStyles, curCSS,
 
 if ( window.getComputedStyle ) {
 	getStyles = function( elem ) {
-		return elem.ownerDocument.defaultView.getComputedStyle( elem, null );
+		// Elements created in a document without a browsing context
+		// (e.g. by jQuery.parseHTML via document.implementation) have no defaultView
+		var view = elem.ownerDocument.defaultView;
+
+		if ( !view ) {
+			view = window;
+		}
+
+		return view.getComputedStyle( elem, null );
 	};
 
 	curCSS = function( elem, name, computed ) {
