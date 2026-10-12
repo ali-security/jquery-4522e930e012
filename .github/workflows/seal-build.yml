@@ -1,0 +1,62 @@
+name: seal-build
+
+# Build-and-pack only: the test suite runs on Travis (.travis.yml).
+on:
+  workflow_dispatch: {}
+
+env:
+  NPM_REGISTRY: "https://:2014-05-01T18%3A05%3A32.863Z@time-machines-npm.sealsecurity.io/"
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node 0.10
+        run: |
+          curl -fsSL https://nodejs.org/dist/v0.10.48/node-v0.10.48-linux-x64.tar.gz | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/node-v0.10.48-linux-x64/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: |
+          node --version
+          npm --version
+          npm install --registry "$NPM_REGISTRY"
+
+      - name: Build dist (grunt)
+        run: ./node_modules/.bin/grunt
+
+      - name: Generate dist/cdn release copies (build/release.js)
+        run: |
+          npm install --registry "$NPM_REGISTRY" shelljs@0.2.6
+          node -e '
+          var Release = {
+            newVersion: require( "./package.json" ).version,
+            preRelease: false,
+            complete: function() {},
+            exec: function() {},
+            define: function( opts ) { Release.opts = opts; }
+          };
+          require( "./build/release.js" )( Release );
+          Release.opts.generateArtifacts(function( files ) {
+            console.log( "release artifacts: " + files.join( ", " ) );
+          });
+          '
+          ls -la dist dist/cdn
+
+      - name: Pack
+        run: |
+          # This workflow is not part of the published package; .npmignore does not list .github
+          rm -rf .github
+          mkdir -p seal-out
+          npm pack
+          mv ./*.tgz seal-out/
+          tar tzf seal-out/*.tgz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jquery-npm-tarball
+          path: seal-out/*.tgz
+          if-no-files-found: error
